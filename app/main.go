@@ -7,9 +7,21 @@ import (
 	"strings"
 )
 
-// Ensures gofmt doesn't remove the "fmt" and "os" imports in stage 1 (feel free to remove this!)
-var _ = fmt.Fprint
-var _ = os.Stdout
+func echo(args []string) {
+	fmt.Println(strings.Join(args, " "))
+}
+
+func parseLine(line string) (command string, args []string) {
+	words := strings.Split(strings.TrimSpace(line), " ")
+	command = words[0]
+	for _, arg := range words[1:] {
+		if arg == "" {
+			continue
+		}
+		args = append(args, arg)
+	}
+	return
+}
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -17,12 +29,16 @@ func main() {
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
 		if scanner.Scan() {
-			command := strings.TrimSpace(scanner.Text())
+			line := scanner.Text()
+			command, args := parseLine(line)
 			switch command {
 			case "exit":
 				return
+			case "echo":
+				echo(args)
+			default:
+				fmt.Printf("%s: command not found\n", command)
 			}
-			fmt.Printf("%s: command not found\n", command)
 		}
 	}
 }
