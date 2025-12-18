@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -27,4 +28,8 @@ func Type(args []string) {
 	} else {
 		fmt.Printf("%s: not found\n", command)
 	}
+}
+
+func Exit(args []string) {
+	os.Exit(0)
 }

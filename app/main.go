@@ -31,7 +31,7 @@ func main() {
 			command, args := parseLine(line)
 			switch command {
 			case "exit":
-				return
+				commands.Exit(args)
 			case "echo":
 				commands.Echo(args)
 			case "type":
