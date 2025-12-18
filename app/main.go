@@ -28,16 +28,12 @@ func main() {
 		fmt.Fprint(os.Stdout, "$ ")
 		if scanner.Scan() {
 			command, args := parseLine(scanner.Text())
-			switch command {
-			case "":
+
+			if command == "" {
 				continue
-			case "exit":
-				commands.Exit(args)
-			case "echo":
-				commands.Echo(args)
-			case "type":
-				commands.Type(args)
-			default:
+			} else if commands.IsBuiltin(command) {
+				commands.Builtins[command](args)
+			} else {
 				fmt.Printf("%s: command not found\n", command)
 			}
 		}
