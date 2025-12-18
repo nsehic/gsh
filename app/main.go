@@ -27,9 +27,10 @@ func main() {
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
 		if scanner.Scan() {
-			line := scanner.Text()
-			command, args := parseLine(line)
+			command, args := parseLine(scanner.Text())
 			switch command {
+			case "":
+				continue
 			case "exit":
 				commands.Exit(args)
 			case "echo":
