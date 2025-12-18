@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
-)
 
-func echo(args []string) {
-	fmt.Println(strings.Join(args, " "))
-}
+	"github.com/codecrafters-io/shell-starter-go/commands"
+)
 
 func parseLine(line string) (command string, args []string) {
 	words := strings.Split(strings.TrimSpace(line), " ")
@@ -35,7 +33,9 @@ func main() {
 			case "exit":
 				return
 			case "echo":
-				echo(args)
+				commands.Echo(args)
+			case "type":
+				commands.Type(args)
 			default:
 				fmt.Printf("%s: command not found\n", command)
 			}
