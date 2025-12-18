@@ -13,15 +13,16 @@ var _ = os.Stdout
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Fprint(os.Stdout, "$ ")
-repl:
-	for scanner.Scan() {
-		command := strings.TrimSpace(scanner.Text())
-		switch command {
-		case "exit":
-			break repl
-		}
-		fmt.Printf("%s: command not found\n", command)
+
+	for {
 		fmt.Fprint(os.Stdout, "$ ")
+		if scanner.Scan() {
+			command := strings.TrimSpace(scanner.Text())
+			switch command {
+			case "exit":
+				return
+			}
+			fmt.Printf("%s: command not found\n", command)
+		}
 	}
 }
