@@ -44,7 +44,7 @@ func Type(args []string) {
 		return
 	}
 
-	for path := range strings.SplitSeq(os.Getenv("PATH"), ":") {
+	for path := range strings.SplitSeq(os.Getenv("PATH"), string(os.PathListSeparator)) {
 		entries, err := os.ReadDir(path)
 		if err != nil {
 			continue
