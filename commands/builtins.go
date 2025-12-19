@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strings"
 )
 
@@ -44,18 +44,10 @@ func Type(args []string) {
 		return
 	}
 
-	for path := range strings.SplitSeq(os.Getenv("PATH"), string(os.PathListSeparator)) {
-		entries, err := os.ReadDir(path)
-		if err != nil {
-			continue
-		}
-
-		for _, entry := range entries {
-			if entry.Name() == command && isExecutable(entry) {
-				fmt.Printf("%s is %s\n", command, filepath.Join(path, entry.Name()))
-				return
-			}
-		}
+	path, err := exec.LookPath(command)
+	if err == nil {
+		fmt.Printf("%s is %s\n", command, path)
+		return
 	}
 
 	fmt.Printf("%s: not found\n", command)
