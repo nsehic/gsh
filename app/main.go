@@ -25,15 +25,20 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
-		fmt.Fprint(os.Stdout, "$ ")
+		fmt.Print("$ ")
 		if scanner.Scan() {
 			command, args := parseLine(scanner.Text())
 
-			if command == "" {
+			switch command {
+			case "":
 				continue
-			} else if commands.IsBuiltin(command) {
-				commands.Builtins[command](args)
-			} else {
+			case "echo":
+				commands.Echo(args)
+			case "exit":
+				commands.Exit(args)
+			case "type":
+				commands.Type(args)
+			default:
 				fmt.Printf("%s: command not found\n", command)
 			}
 		}

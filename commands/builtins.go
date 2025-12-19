@@ -6,23 +6,10 @@ import (
 	"strings"
 )
 
-type Command func(args []string)
-
-var Builtins = map[string]Command{}
-
-func register(command string, fn Command) {
-	Builtins[command] = fn
-}
-
-func init() {
-	register("exit", Exit)
-	register("echo", Echo)
-	register("type", Type)
-}
-
-func IsBuiltin(name string) bool {
-	_, ok := Builtins[name]
-	return ok
+var builtins = map[string]struct{}{
+	"echo": {},
+	"exit": {},
+	"type": {},
 }
 
 func Echo(args []string) {
@@ -41,7 +28,7 @@ func Type(args []string) {
 
 	command := args[0]
 
-	if IsBuiltin(command) {
+	if _, ok := builtins[command]; ok {
 		fmt.Printf("%s is a shell builtin\n", command)
 	} else {
 		fmt.Printf("%s: not found\n", command)
