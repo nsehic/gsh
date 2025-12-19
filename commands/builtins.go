@@ -13,16 +13,6 @@ var builtins = map[string]struct{}{
 	"type": {},
 }
 
-func isExecutable(entry os.DirEntry) bool {
-	info, err := entry.Info()
-	if err != nil {
-		return false
-	}
-
-	mode := info.Mode()
-	return mode.IsRegular() && mode&0111 != 0
-}
-
 func Echo(args []string) {
 	fmt.Println(strings.Join(args, " "))
 }
