@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/commands"
@@ -39,7 +41,17 @@ func main() {
 			case "type":
 				commands.Type(args)
 			default:
-				fmt.Printf("%s: command not found\n", command)
+				cmd := exec.Command(command, args...)
+				cmd.Stdin = os.Stdin
+				cmd.Stdout = os.Stdout
+				err := cmd.Run()
+				if err != nil {
+					if errors.Is(err, exec.ErrNotFound) {
+						fmt.Printf("%s: command not found\n", command)
+					} else {
+						fmt.Println(err)
+					}
+				}
 			}
 		}
 	}
