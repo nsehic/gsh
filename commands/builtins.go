@@ -19,6 +19,7 @@ func init() {
 		"echo": echoCmd,
 		"exit": exitCmd,
 		"type": typeCmd,
+		"pwd":  pwdCmd,
 	}
 }
 
@@ -64,4 +65,12 @@ func typeCmd(args []string) {
 	}
 
 	fmt.Printf("%s: not found\n", command)
+}
+
+func pwdCmd(args []string) {
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("ERROR: %v\n", err)
+	}
+	fmt.Println(dir)
 }
