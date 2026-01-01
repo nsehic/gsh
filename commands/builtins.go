@@ -82,8 +82,16 @@ func cdCmd(args []string) {
 		fmt.Println("cd: invalid arguments")
 		return
 	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf("cd: %v\n", err)
+	}
 	dirpath := args[0]
 	absDirpath := dirpath
+
+	if strings.HasPrefix(absDirpath, "~") {
+		absDirpath = strings.Replace(absDirpath, "~", home, 1)
+	}
 
 	if !filepath.IsAbs(absDirpath) {
 		pwd, err := os.Getwd()
@@ -105,4 +113,5 @@ func cdCmd(args []string) {
 			fmt.Printf("cd: %s: %v", dirpath, err)
 		}
 	}
+
 }
