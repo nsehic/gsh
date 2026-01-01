@@ -31,16 +31,9 @@ func main() {
 		if scanner.Scan() {
 			command, args := parseLine(scanner.Text())
 
-			switch command {
-			case "":
-				continue
-			case "echo":
-				commands.Echo(args)
-			case "exit":
-				commands.Exit(args)
-			case "type":
-				commands.Type(args)
-			default:
+			err := commands.ExecuteBuiltin(command, args)
+			if err != nil {
+				// Not a builtin command, check the path instead
 				cmd := exec.Command(command, args...)
 				cmd.Stdin = os.Stdin
 				cmd.Stdout = os.Stdout
