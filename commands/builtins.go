@@ -83,18 +83,26 @@ func cdCmd(args []string) {
 		return
 	}
 	dirpath := args[0]
+	absDirpath := dirpath
 
-	if filepath.IsAbs(dirpath) {
-		info, err := os.Stat(dirpath)
-		if errors.Is(err, os.ErrNotExist) {
-			fmt.Printf("cd: %s: No such file or directory\n", dirpath)
+	if !filepath.IsAbs(absDirpath) {
+		pwd, err := os.Getwd()
+		if err != nil {
+			fmt.Printf("cd: %v\n", err)
 			return
 		}
+		absDirpath = filepath.Join(pwd, absDirpath)
+	}
 
-		if info.IsDir() {
-			if err := os.Chdir(dirpath); err != nil {
-				fmt.Printf("cd: %s: %v", dirpath, err)
-			}
+	info, err := os.Stat(absDirpath)
+	if errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("cd: %s: No such file or directory\n", dirpath)
+		return
+	}
+
+	if info.IsDir() {
+		if err := os.Chdir(absDirpath); err != nil {
+			fmt.Printf("cd: %s: %v", dirpath, err)
 		}
 	}
 }
