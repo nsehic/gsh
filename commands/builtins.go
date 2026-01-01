@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -20,6 +21,7 @@ func init() {
 		"exit": exitCmd,
 		"type": typeCmd,
 		"pwd":  pwdCmd,
+		"cd":   cdCmd,
 	}
 }
 
@@ -46,8 +48,8 @@ func exitCmd(args []string) {
 }
 
 func typeCmd(args []string) {
-	if len(args) < 1 {
-		fmt.Println("Provide a valid command")
+	if len(args) != 1 {
+		fmt.Println("type: invalid arguments")
 		return
 	}
 
@@ -70,7 +72,29 @@ func typeCmd(args []string) {
 func pwdCmd(args []string) {
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("ERROR: %v\n", err)
+		fmt.Printf("pwd: %v\n", err)
 	}
 	fmt.Println(dir)
+}
+
+func cdCmd(args []string) {
+	if len(args) != 1 {
+		fmt.Println("cd: invalid arguments")
+		return
+	}
+	dirpath := args[0]
+
+	if filepath.IsAbs(dirpath) {
+		info, err := os.Stat(dirpath)
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Printf("cd: %s: No such file or directory\n", dirpath)
+			return
+		}
+
+		if info.IsDir() {
+			if err := os.Chdir(dirpath); err != nil {
+				fmt.Printf("cd: %s: %v", dirpath, err)
+			}
+		}
+	}
 }
