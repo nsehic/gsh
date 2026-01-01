@@ -32,7 +32,7 @@ func main() {
 			command, args := parseLine(scanner.Text())
 
 			err := commands.ExecuteBuiltin(command, args)
-			if err != nil {
+			if errors.Is(err, commands.ErrNotBuiltin) {
 				// Not a builtin command, check the path instead
 				cmd := exec.Command(command, args...)
 				cmd.Stdin = os.Stdin
