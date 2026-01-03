@@ -80,6 +80,9 @@ func (p *Parser) Parse(input string) (string, []string) {
 				p.escape = true
 			}
 		default:
+			if p.escape {
+				p.escape = false
+			}
 			p.stringBuffer.WriteRune(c)
 		}
 	}
