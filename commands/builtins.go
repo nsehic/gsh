@@ -11,7 +11,7 @@ import (
 
 type Command func(args []string)
 
-var ErrNotBuiltin = errors.New("the given command is not a builtin")
+var ErrBuiltinNotExists = errors.New("this builtin does not exist")
 
 var builtins map[string]Command
 
@@ -32,7 +32,7 @@ func IsBuiltin(command string) bool {
 
 func ExecuteBuiltin(command string, args []string) error {
 	if !IsBuiltin(command) {
-		return ErrNotBuiltin
+		return ErrBuiltinNotExists
 	}
 
 	builtins[command](args)
