@@ -6,6 +6,7 @@ type Parser struct {
 	result       []string
 	singleQuote  bool
 	doubleQuote  bool
+	escape       bool
 	concatString bool
 	stringBuffer strings.Builder
 	input        string
@@ -17,6 +18,11 @@ func (p *Parser) Parse(input string) (string, []string) {
 	for i, c := range input {
 		switch string(c) {
 		case "'":
+			if p.escape {
+				p.stringBuffer.WriteRune(c)
+				p.escape = false
+				continue
+			}
 			if p.doubleQuote {
 				p.stringBuffer.WriteRune(c)
 				continue
@@ -34,6 +40,11 @@ func (p *Parser) Parse(input string) (string, []string) {
 				p.singleQuote = true
 			}
 		case "\"":
+			if p.escape {
+				p.stringBuffer.WriteRune(c)
+				p.escape = false
+				continue
+			}
 			if p.singleQuote {
 				p.stringBuffer.WriteRune(c)
 				continue
@@ -51,10 +62,22 @@ func (p *Parser) Parse(input string) (string, []string) {
 				p.doubleQuote = true
 			}
 		case " ":
+			if p.escape {
+				p.stringBuffer.WriteRune(c)
+				p.escape = false
+				continue
+			}
 			if p.singleQuote || p.doubleQuote {
 				p.stringBuffer.WriteRune(c)
 			} else {
 				p.flushStringBuffer()
+			}
+		case "\\":
+			if p.escape {
+				p.stringBuffer.WriteRune(c)
+				p.escape = false
+			} else if !p.singleQuote && !p.doubleQuote {
+				p.escape = true
 			}
 		default:
 			p.stringBuffer.WriteRune(c)
@@ -79,6 +102,7 @@ func (p *Parser) Reset() {
 	p.singleQuote = false
 	p.doubleQuote = false
 	p.concatString = false
+	p.escape = false
 }
 
 func (p *Parser) flushStringBuffer() {
