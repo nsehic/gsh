@@ -76,8 +76,10 @@ func (p *Parser) Parse(input string) (string, []string) {
 			if p.escape {
 				p.stringBuffer.WriteRune(c)
 				p.escape = false
-			} else if !p.singleQuote {
+			} else if !p.singleQuote && !p.doubleQuote {
 				p.escape = true
+			} else {
+				p.stringBuffer.WriteRune(c)
 			}
 		default:
 			if p.escape {
