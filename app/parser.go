@@ -5,6 +5,7 @@ import "strings"
 type Parser struct {
 	result       []string
 	singleQuote  bool
+	doubleQuote  bool
 	concatString bool
 	stringBuffer strings.Builder
 	input        string
@@ -16,6 +17,10 @@ func (p *Parser) Parse(input string) (string, []string) {
 	for i, c := range input {
 		switch string(c) {
 		case "'":
+			if p.doubleQuote {
+				p.stringBuffer.WriteRune(c)
+				continue
+			}
 			if p.singleQuote {
 				if p.concatString {
 					p.concatString = false
@@ -28,8 +33,25 @@ func (p *Parser) Parse(input string) (string, []string) {
 			} else {
 				p.singleQuote = true
 			}
-		case " ":
+		case "\"":
 			if p.singleQuote {
+				p.stringBuffer.WriteRune(c)
+				continue
+			}
+			if p.doubleQuote {
+				if p.concatString {
+					p.concatString = false
+				} else if p.getNextChar(i) != " " {
+					p.concatString = true
+				} else {
+					p.doubleQuote = false
+					p.flushStringBuffer()
+				}
+			} else {
+				p.doubleQuote = true
+			}
+		case " ":
+			if p.singleQuote || p.doubleQuote {
 				p.stringBuffer.WriteRune(c)
 			} else {
 				p.flushStringBuffer()
@@ -55,6 +77,7 @@ func (p *Parser) Reset() {
 	p.result = []string{}
 	p.stringBuffer.Reset()
 	p.singleQuote = false
+	p.doubleQuote = false
 	p.concatString = false
 }
 
