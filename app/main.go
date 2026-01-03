@@ -31,7 +31,7 @@ func parseInput(input string) (string, []string) {
 				if concatString {
 					concatString = false
 					continue
-				} else if getNextChar(i, input) == "'" {
+				} else if getNextChar(i, input) != " " {
 					concatString = true
 				} else {
 					singleQuote = false
