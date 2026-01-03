@@ -16,8 +16,8 @@ func (p *Parser) Parse(input string) (string, []string) {
 	p.input = input
 	defer p.Reset()
 	for i, c := range input {
-		switch string(c) {
-		case "'":
+		switch c {
+		case '\'':
 			if p.escape {
 				p.stringBuffer.WriteRune(c)
 				p.escape = false
@@ -39,7 +39,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			} else {
 				p.singleQuote = true
 			}
-		case "\"":
+		case '"':
 			if p.escape {
 				p.stringBuffer.WriteRune(c)
 				p.escape = false
@@ -61,7 +61,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			} else {
 				p.doubleQuote = true
 			}
-		case " ":
+		case ' ':
 			if p.escape {
 				p.stringBuffer.WriteRune(c)
 				p.escape = false
@@ -72,11 +72,11 @@ func (p *Parser) Parse(input string) (string, []string) {
 			} else {
 				p.flushStringBuffer()
 			}
-		case "\\":
+		case '\\':
 			if p.escape {
 				p.stringBuffer.WriteRune(c)
 				p.escape = false
-			} else if !p.singleQuote && !p.doubleQuote {
+			} else if !p.singleQuote {
 				p.escape = true
 			}
 		default:
