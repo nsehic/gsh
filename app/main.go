@@ -18,6 +18,9 @@ func main() {
 		fmt.Print("$ ")
 		if scanner.Scan() {
 			command, args := parser.Parse(scanner.Text())
+			if command == "" {
+				continue
+			}
 
 			err := commands.ExecuteBuiltin(command, args)
 			if errors.Is(err, commands.ErrBuiltinNotExists) {

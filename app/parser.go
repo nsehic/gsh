@@ -14,7 +14,7 @@ type Parser struct {
 
 func (p *Parser) Parse(input string) (string, []string) {
 	p.input = input
-	defer p.reset()
+	defer p.Reset()
 
 	for pos, char := range input {
 		switch char {
@@ -90,7 +90,10 @@ func (p *Parser) Parse(input string) (string, []string) {
 		}
 	}
 	p.flushBuffer()
-	return p.result[0], p.result[1:]
+	if len(p.result) > 0 {
+		return p.result[0], p.result[1:]
+	}
+	return "", []string{}
 }
 
 func (p *Parser) getNextChar(pos int) string {
@@ -101,7 +104,7 @@ func (p *Parser) getNextChar(pos int) string {
 	return string(r[pos+1])
 }
 
-func (p *Parser) reset() {
+func (p *Parser) Reset() {
 	p.input = ""
 	p.result = []string{}
 	p.buffer.Reset()
