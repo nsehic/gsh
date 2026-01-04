@@ -77,7 +77,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			if p.escapeMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
-			} else if !p.singleQuoteMode && !p.doubleQuoteMode {
+			} else if !p.singleQuoteMode {
 				p.escapeMode = true
 			} else {
 				p.buffer.WriteRune(char)
