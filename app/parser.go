@@ -19,16 +19,10 @@ func (p *Parser) Parse(input string) (string, []string) {
 	for pos, char := range input {
 		switch char {
 		case '\'':
-			if p.escapeMode {
+			if p.escapeMode || p.doubleQuoteMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
-				continue
-			}
-			if p.doubleQuoteMode {
-				p.buffer.WriteRune(char)
-				continue
-			}
-			if p.singleQuoteMode {
+			} else if p.singleQuoteMode {
 				if p.concatMode {
 					p.concatMode = false
 				} else if p.getNextChar(pos) != ' ' {
@@ -41,16 +35,10 @@ func (p *Parser) Parse(input string) (string, []string) {
 				p.singleQuoteMode = true
 			}
 		case '"':
-			if p.escapeMode {
+			if p.escapeMode || p.singleQuoteMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
-				continue
-			}
-			if p.singleQuoteMode {
-				p.buffer.WriteRune(char)
-				continue
-			}
-			if p.doubleQuoteMode {
+			} else if p.doubleQuoteMode {
 				if p.concatMode {
 					p.concatMode = false
 				} else if p.getNextChar(pos) != ' ' {
@@ -63,18 +51,15 @@ func (p *Parser) Parse(input string) (string, []string) {
 				p.doubleQuoteMode = true
 			}
 		case ' ':
-			if p.escapeMode {
+			if p.escapeMode || p.singleQuoteMode || p.doubleQuoteMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
-				continue
-			}
-			if p.singleQuoteMode || p.doubleQuoteMode {
-				p.buffer.WriteRune(char)
 			} else {
 				p.flushBuffer()
 			}
 		case '\\':
 			nextChar := p.getNextChar(pos)
+
 			if p.escapeMode || p.singleQuoteMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
