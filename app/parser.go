@@ -78,7 +78,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			if p.escapeMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
-			} else if p.doubleQuoteMode && (nextChar == '\\' || nextChar == '"') {
+			} else if !p.doubleQuoteMode || (p.doubleQuoteMode && (nextChar == '\\' || nextChar == '"')) {
 				p.escapeMode = true
 			} else {
 				p.buffer.WriteRune(char)
