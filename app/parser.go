@@ -31,7 +31,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			if p.singleQuoteMode {
 				if p.concatMode {
 					p.concatMode = false
-				} else if p.getNextChar(pos) != " " {
+				} else if p.getNextChar(pos) != ' ' {
 					p.concatMode = true
 				} else {
 					p.singleQuoteMode = false
@@ -53,7 +53,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			if p.doubleQuoteMode {
 				if p.concatMode {
 					p.concatMode = false
-				} else if p.getNextChar(pos) != " " {
+				} else if p.getNextChar(pos) != ' ' {
 					p.concatMode = true
 				} else {
 					p.doubleQuoteMode = false
@@ -74,10 +74,11 @@ func (p *Parser) Parse(input string) (string, []string) {
 				p.flushBuffer()
 			}
 		case '\\':
+			nextChar := p.getNextChar(pos)
 			if p.escapeMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
-			} else if !p.singleQuoteMode {
+			} else if p.doubleQuoteMode && (nextChar == '\\' || nextChar == '"') {
 				p.escapeMode = true
 			} else {
 				p.buffer.WriteRune(char)
@@ -96,12 +97,12 @@ func (p *Parser) Parse(input string) (string, []string) {
 	return "", []string{}
 }
 
-func (p *Parser) getNextChar(pos int) string {
+func (p *Parser) getNextChar(pos int) rune {
 	r := []rune(p.input)
 	if pos >= len(r)-1 {
-		return ""
+		return 0
 	}
-	return string(r[pos+1])
+	return r[pos+1]
 }
 
 func (p *Parser) Reset() {
