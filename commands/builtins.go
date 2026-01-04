@@ -48,25 +48,25 @@ func exitCmd(args []string) {
 }
 
 func typeCmd(args []string) {
-	if len(args) != 1 {
+	if len(args) < 1 {
 		fmt.Println("type: invalid arguments")
 		return
 	}
 
-	command := args[0]
+	for _, arg := range args {
+		if IsBuiltin(arg) {
+			fmt.Printf("%s is a shell builtin\n", arg)
+			continue
+		}
 
-	if IsBuiltin(command) {
-		fmt.Printf("%s is a shell builtin\n", command)
-		return
+		path, err := exec.LookPath(arg)
+		if err == nil {
+			fmt.Printf("%s is %s\n", arg, path)
+			continue
+		}
+
+		fmt.Printf("%s: not found\n", arg)
 	}
-
-	path, err := exec.LookPath(command)
-	if err == nil {
-		fmt.Printf("%s is %s\n", command, path)
-		return
-	}
-
-	fmt.Printf("%s: not found\n", command)
 }
 
 func pwdCmd(args []string) {
@@ -78,15 +78,20 @@ func pwdCmd(args []string) {
 }
 
 func cdCmd(args []string) {
-	if len(args) != 1 {
-		fmt.Println("cd: invalid arguments")
+	if len(args) > 1 {
+		fmt.Println("Too many args to cd command")
 		return
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Printf("cd: %v\n", err)
 	}
-	dirpath := args[0]
+	var dirpath string
+	if len(args) == 0 {
+		dirpath = "~"
+	} else {
+		dirpath = args[0]
+	}
 	absDirpath := dirpath
 
 	if strings.HasPrefix(absDirpath, "~") {
@@ -113,5 +118,4 @@ func cdCmd(args []string) {
 			fmt.Printf("cd: %s: %v", dirpath, err)
 		}
 	}
-
 }

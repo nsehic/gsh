@@ -3,92 +3,93 @@ package main
 import "strings"
 
 type Parser struct {
-	result       []string
-	singleQuote  bool
-	doubleQuote  bool
-	escape       bool
-	concatString bool
-	stringBuffer strings.Builder
-	input        string
+	result          []string
+	buffer          strings.Builder
+	input           string
+	singleQuoteMode bool
+	doubleQuoteMode bool
+	escapeMode      bool
+	concatMode      bool
 }
 
 func (p *Parser) Parse(input string) (string, []string) {
 	p.input = input
-	defer p.Reset()
-	for i, c := range input {
-		switch c {
+	defer p.reset()
+
+	for pos, char := range input {
+		switch char {
 		case '\'':
-			if p.escape {
-				p.stringBuffer.WriteRune(c)
-				p.escape = false
+			if p.escapeMode {
+				p.buffer.WriteRune(char)
+				p.escapeMode = false
 				continue
 			}
-			if p.doubleQuote {
-				p.stringBuffer.WriteRune(c)
+			if p.doubleQuoteMode {
+				p.buffer.WriteRune(char)
 				continue
 			}
-			if p.singleQuote {
-				if p.concatString {
-					p.concatString = false
-				} else if p.getNextChar(i) != " " {
-					p.concatString = true
+			if p.singleQuoteMode {
+				if p.concatMode {
+					p.concatMode = false
+				} else if p.getNextChar(pos) != " " {
+					p.concatMode = true
 				} else {
-					p.singleQuote = false
-					p.flushStringBuffer()
+					p.singleQuoteMode = false
+					p.flushBuffer()
 				}
 			} else {
-				p.singleQuote = true
+				p.singleQuoteMode = true
 			}
 		case '"':
-			if p.escape {
-				p.stringBuffer.WriteRune(c)
-				p.escape = false
+			if p.escapeMode {
+				p.buffer.WriteRune(char)
+				p.escapeMode = false
 				continue
 			}
-			if p.singleQuote {
-				p.stringBuffer.WriteRune(c)
+			if p.singleQuoteMode {
+				p.buffer.WriteRune(char)
 				continue
 			}
-			if p.doubleQuote {
-				if p.concatString {
-					p.concatString = false
-				} else if p.getNextChar(i) != " " {
-					p.concatString = true
+			if p.doubleQuoteMode {
+				if p.concatMode {
+					p.concatMode = false
+				} else if p.getNextChar(pos) != " " {
+					p.concatMode = true
 				} else {
-					p.doubleQuote = false
-					p.flushStringBuffer()
+					p.doubleQuoteMode = false
+					p.flushBuffer()
 				}
 			} else {
-				p.doubleQuote = true
+				p.doubleQuoteMode = true
 			}
 		case ' ':
-			if p.escape {
-				p.stringBuffer.WriteRune(c)
-				p.escape = false
+			if p.escapeMode {
+				p.buffer.WriteRune(char)
+				p.escapeMode = false
 				continue
 			}
-			if p.singleQuote || p.doubleQuote {
-				p.stringBuffer.WriteRune(c)
+			if p.singleQuoteMode || p.doubleQuoteMode {
+				p.buffer.WriteRune(char)
 			} else {
-				p.flushStringBuffer()
+				p.flushBuffer()
 			}
 		case '\\':
-			if p.escape {
-				p.stringBuffer.WriteRune(c)
-				p.escape = false
-			} else if !p.singleQuote && !p.doubleQuote {
-				p.escape = true
+			if p.escapeMode {
+				p.buffer.WriteRune(char)
+				p.escapeMode = false
+			} else if !p.singleQuoteMode && !p.doubleQuoteMode {
+				p.escapeMode = true
 			} else {
-				p.stringBuffer.WriteRune(c)
+				p.buffer.WriteRune(char)
 			}
 		default:
-			if p.escape {
-				p.escape = false
+			if p.escapeMode {
+				p.escapeMode = false
 			}
-			p.stringBuffer.WriteRune(c)
+			p.buffer.WriteRune(char)
 		}
 	}
-	p.flushStringBuffer()
+	p.flushBuffer()
 	return p.result[0], p.result[1:]
 }
 
@@ -100,19 +101,19 @@ func (p *Parser) getNextChar(pos int) string {
 	return string(r[pos+1])
 }
 
-func (p *Parser) Reset() {
+func (p *Parser) reset() {
 	p.input = ""
 	p.result = []string{}
-	p.stringBuffer.Reset()
-	p.singleQuote = false
-	p.doubleQuote = false
-	p.concatString = false
-	p.escape = false
+	p.buffer.Reset()
+	p.singleQuoteMode = false
+	p.doubleQuoteMode = false
+	p.concatMode = false
+	p.escapeMode = false
 }
 
-func (p *Parser) flushStringBuffer() {
-	if p.stringBuffer.Len() > 0 {
-		p.result = append(p.result, p.stringBuffer.String())
-		p.stringBuffer.Reset()
+func (p *Parser) flushBuffer() {
+	if p.buffer.Len() > 0 {
+		p.result = append(p.result, p.buffer.String())
+		p.buffer.Reset()
 	}
 }
