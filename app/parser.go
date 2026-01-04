@@ -75,7 +75,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			}
 		case '\\':
 			nextChar := p.getNextChar(pos)
-			if p.escapeMode {
+			if p.escapeMode || p.singleQuoteMode {
 				p.buffer.WriteRune(char)
 				p.escapeMode = false
 			} else if !p.doubleQuoteMode || (p.doubleQuoteMode && (nextChar == '\\' || nextChar == '"')) {
