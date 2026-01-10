@@ -6,9 +6,21 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/codecrafters-io/shell-starter-go/commands"
 )
+
+func getFile(path string) (*os.File, error) {
+	if !filepath.IsAbs(path) {
+		pwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		path = filepath.Join(pwd, path)
+	}
+	return os.Create(path)
+}
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -17,24 +29,42 @@ func main() {
 	for {
 		fmt.Print("$ ")
 		if scanner.Scan() {
-			command, args := parser.Parse(scanner.Text())
-			if command == "" {
+			parseResult := parser.Parse(scanner.Text())
+			if parseResult == nil {
 				continue
 			}
 
-			err := commands.ExecuteBuiltin(command, args)
-			if errors.Is(err, commands.ErrBuiltinNotExists) {
-				// Not a builtin command, check the path instead
-				cmd := exec.Command(command, args...)
-				cmd.Stdin = os.Stdin
-				cmd.Stdout = os.Stdout
-				err := cmd.Run()
+			stdout := os.Stdout
+			shouldCloseStdout := false
+
+			if parseResult.StdoutRedirectPath != "" {
+				file, err := getFile(parseResult.StdoutRedirectPath)
 				if err != nil {
-					if errors.Is(err, exec.ErrNotFound) {
-						fmt.Printf("%s: command not found\n", command)
-					} else {
-						fmt.Println(err)
-					}
+					fmt.Printf("error: %v\n", err)
+				} else {
+					stdout = file
+					shouldCloseStdout = true
+				}
+			}
+
+			cmd := commands.Command(parseResult.Command, parseResult.Args...)
+			cmd.Out = stdout
+
+			if err := cmd.Run(); err != nil {
+				var execError *exec.Error
+				var pathError *os.PathError
+
+				switch {
+				case errors.As(err, &execError):
+					fmt.Fprintf(cmd.Err, "%s: not found\n", cmd.Name)
+				case errors.As(err, &pathError):
+					fmt.Fprintf(cmd.Err, "%s: %v\n", cmd.Name, pathError.Err)
+				}
+			}
+
+			if shouldCloseStdout {
+				if err := stdout.Close(); err != nil {
+					fmt.Printf("error: %v\n", err)
 				}
 			}
 		}

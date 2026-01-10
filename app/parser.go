@@ -1,18 +1,40 @@
 package main
 
-import "strings"
+import (
+	"strings"
+)
+
+type TokenKind uint8
+
+const (
+	TokenKindLiteral TokenKind = iota
+	TokenKindSymbol
+)
+
+type Token struct {
+	Kind  TokenKind
+	Value string
+}
 
 type Parser struct {
-	result          []string
+	tokens          []Token
 	buffer          strings.Builder
 	input           string
 	singleQuoteMode bool
 	doubleQuoteMode bool
 	escapeMode      bool
 	concatMode      bool
+	symbolMode      bool
 }
 
-func (p *Parser) Parse(input string) (string, []string) {
+type ParseResult struct {
+	Command            string
+	Args               []string
+	StdoutRedirectPath string
+	StderrRedirectPath string
+}
+
+func (p *Parser) Parse(input string) *ParseResult {
 	p.input = input
 	defer p.Reset()
 
@@ -20,8 +42,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 		switch char {
 		case '\'':
 			if p.escapeMode || p.doubleQuoteMode {
-				p.buffer.WriteRune(char)
-				p.escapeMode = false
+				p.writeChar(char)
 			} else if p.singleQuoteMode {
 				if p.concatMode {
 					p.concatMode = false
@@ -36,8 +57,7 @@ func (p *Parser) Parse(input string) (string, []string) {
 			}
 		case '"':
 			if p.escapeMode || p.singleQuoteMode {
-				p.buffer.WriteRune(char)
-				p.escapeMode = false
+				p.writeChar(char)
 			} else if p.doubleQuoteMode {
 				if p.concatMode {
 					p.concatMode = false
@@ -52,34 +72,71 @@ func (p *Parser) Parse(input string) (string, []string) {
 			}
 		case ' ':
 			if p.escapeMode || p.singleQuoteMode || p.doubleQuoteMode {
-				p.buffer.WriteRune(char)
-				p.escapeMode = false
+				p.writeChar(char)
 			} else {
 				p.flushBuffer()
+			}
+		case '>':
+			prevChar := p.getPrevChar(pos)
+			if p.escapeMode || p.singleQuoteMode || p.doubleQuoteMode {
+				p.writeChar(char)
+			} else if prevChar == ' ' || prevChar == '1' {
+				p.writeSymbol(char)
+			} else {
+				p.writeChar(char)
 			}
 		case '\\':
 			nextChar := p.getNextChar(pos)
 
 			if p.escapeMode || p.singleQuoteMode {
-				p.buffer.WriteRune(char)
-				p.escapeMode = false
+				p.writeChar(char)
 			} else if !p.doubleQuoteMode || (p.doubleQuoteMode && (nextChar == '\\' || nextChar == '"')) {
 				p.escapeMode = true
 			} else {
-				p.buffer.WriteRune(char)
+				p.writeChar(char)
 			}
 		default:
-			if p.escapeMode {
-				p.escapeMode = false
-			}
-			p.buffer.WriteRune(char)
+			p.writeChar(char)
 		}
 	}
 	p.flushBuffer()
-	if len(p.result) > 0 {
-		return p.result[0], p.result[1:]
+	if len(p.tokens) > 0 {
+		commandToken, otherTokens := p.tokens[0], p.tokens[1:]
+		args := []string{}
+		symbolPos := -1
+		for pos, token := range otherTokens {
+			if token.Kind == TokenKindSymbol {
+				symbolPos = pos
+				break
+			}
+			args = append(args, token.Value)
+		}
+		res := ParseResult{
+			Command: commandToken.Value,
+			Args:    args,
+		}
+
+		if symbolPos != -1 && symbolPos < len(otherTokens)-1 {
+			token := otherTokens[symbolPos]
+			if token.Value == ">" || token.Value == "1>" {
+				res.StdoutRedirectPath = otherTokens[symbolPos+1].Value
+			}
+		}
+		return &res
 	}
-	return "", []string{}
+	return nil
+}
+
+func (p *Parser) writeChar(char rune) {
+	p.buffer.WriteRune(char)
+	p.escapeMode = false
+	p.symbolMode = false
+}
+
+func (p *Parser) writeSymbol(char rune) {
+	p.buffer.WriteRune(char)
+	p.escapeMode = false
+	p.symbolMode = true
 }
 
 func (p *Parser) getNextChar(pos int) rune {
@@ -90,19 +147,33 @@ func (p *Parser) getNextChar(pos int) rune {
 	return r[pos+1]
 }
 
+func (p *Parser) getPrevChar(pos int) rune {
+	r := []rune(p.input)
+	if pos <= 0 {
+		return 0
+	}
+	return r[pos-1]
+}
+
 func (p *Parser) Reset() {
 	p.input = ""
-	p.result = []string{}
+	p.tokens = []Token{}
 	p.buffer.Reset()
 	p.singleQuoteMode = false
 	p.doubleQuoteMode = false
 	p.concatMode = false
 	p.escapeMode = false
+	p.symbolMode = false
 }
 
 func (p *Parser) flushBuffer() {
 	if p.buffer.Len() > 0 {
-		p.result = append(p.result, p.buffer.String())
+		kind := TokenKindLiteral
+		if p.symbolMode {
+			kind = TokenKindSymbol
+			p.symbolMode = false
+		}
+		p.tokens = append(p.tokens, Token{Kind: kind, Value: p.buffer.String()})
 		p.buffer.Reset()
 	}
 }
