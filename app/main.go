@@ -37,6 +37,9 @@ func main() {
 			stdout := os.Stdout
 			shouldCloseStdout := false
 
+			stderr := os.Stderr
+			shouldCloseStderr := false
+
 			if parseResult.StdoutRedirectPath != "" {
 				file, err := getFile(parseResult.StdoutRedirectPath)
 				if err != nil {
@@ -47,8 +50,19 @@ func main() {
 				}
 			}
 
+			if parseResult.StderrRedirectPath != "" {
+				file, err := getFile(parseResult.StderrRedirectPath)
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+				} else {
+					stderr = file
+					shouldCloseStderr = true
+				}
+			}
+
 			cmd := commands.Command(parseResult.Command, parseResult.Args...)
 			cmd.Out = stdout
+			cmd.Err = stderr
 
 			if err := cmd.Run(); err != nil {
 				var execError *exec.Error
@@ -64,6 +78,12 @@ func main() {
 
 			if shouldCloseStdout {
 				if err := stdout.Close(); err != nil {
+					fmt.Printf("error: %v\n", err)
+				}
+			}
+
+			if shouldCloseStderr {
+				if err := stderr.Close(); err != nil {
 					fmt.Printf("error: %v\n", err)
 				}
 			}

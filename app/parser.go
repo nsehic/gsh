@@ -80,7 +80,7 @@ func (p *Parser) Parse(input string) *ParseResult {
 			prevChar := p.getPrevChar(pos)
 			if p.escapeMode || p.singleQuoteMode || p.doubleQuoteMode {
 				p.writeChar(char)
-			} else if prevChar == ' ' || prevChar == '1' {
+			} else if prevChar == ' ' || prevChar == '1' || prevChar == '2' {
 				p.writeSymbol(char)
 			} else {
 				p.writeChar(char)
@@ -101,10 +101,10 @@ func (p *Parser) Parse(input string) *ParseResult {
 	}
 	p.flushBuffer()
 	if len(p.tokens) > 0 {
-		commandToken, otherTokens := p.tokens[0], p.tokens[1:]
+		commandToken, tokens := p.tokens[0], p.tokens[1:]
 		args := []string{}
 		symbolPos := -1
-		for pos, token := range otherTokens {
+		for pos, token := range tokens {
 			if token.Kind == TokenKindSymbol {
 				symbolPos = pos
 				break
@@ -116,10 +116,15 @@ func (p *Parser) Parse(input string) *ParseResult {
 			Args:    args,
 		}
 
-		if symbolPos != -1 && symbolPos < len(otherTokens)-1 {
-			token := otherTokens[symbolPos]
-			if token.Value == ">" || token.Value == "1>" {
-				res.StdoutRedirectPath = otherTokens[symbolPos+1].Value
+		if symbolPos != -1 && symbolPos < len(tokens)-1 {
+			token := tokens[symbolPos]
+			nextToken := tokens[symbolPos+1]
+			switch token.Value {
+			case ">":
+			case "1>":
+				res.StdoutRedirectPath = nextToken.Value
+			case "2>":
+				res.StderrRedirectPath = nextToken.Value
 			}
 		}
 		return &res
