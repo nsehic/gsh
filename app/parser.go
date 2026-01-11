@@ -121,6 +121,7 @@ func (p *Parser) Parse(input string) *ParseResult {
 			nextToken := tokens[symbolPos+1]
 			switch token.Value {
 			case ">":
+				res.StdoutRedirectPath = nextToken.Value
 			case "1>":
 				res.StdoutRedirectPath = nextToken.Value
 			case "2>":
