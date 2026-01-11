@@ -11,15 +11,42 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/commands"
 )
 
-func getFile(path string) (*os.File, error) {
+func getOutputFile(path string, append bool) (*os.File, bool) {
+	flag := os.O_CREATE | os.O_WRONLY
+	if append {
+		flag |= os.O_APPEND
+	} else {
+		flag |= os.O_TRUNC
+	}
 	if !filepath.IsAbs(path) {
 		pwd, err := os.Getwd()
 		if err != nil {
-			return nil, err
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			return nil, false
 		}
 		path = filepath.Join(pwd, path)
 	}
-	return os.Create(path)
+
+	file, err := os.OpenFile(path, flag, 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return nil, false
+	}
+	return file, true
+}
+
+func getStdoutFile(path string, append bool) (*os.File, bool) {
+	if path == "" {
+		return os.Stdout, false
+	}
+	return getOutputFile(path, append)
+}
+
+func getStderrFile(path string, append bool) (*os.File, bool) {
+	if path == "" {
+		return os.Stderr, false
+	}
+	return getOutputFile(path, append)
 }
 
 func main() {
@@ -34,31 +61,8 @@ func main() {
 				continue
 			}
 
-			stdout := os.Stdout
-			shouldCloseStdout := false
-
-			stderr := os.Stderr
-			shouldCloseStderr := false
-
-			if parseResult.StdoutRedirectPath != "" {
-				file, err := getFile(parseResult.StdoutRedirectPath)
-				if err != nil {
-					fmt.Printf("error: %v\n", err)
-				} else {
-					stdout = file
-					shouldCloseStdout = true
-				}
-			}
-
-			if parseResult.StderrRedirectPath != "" {
-				file, err := getFile(parseResult.StderrRedirectPath)
-				if err != nil {
-					fmt.Printf("error: %v\n", err)
-				} else {
-					stderr = file
-					shouldCloseStderr = true
-				}
-			}
+			stdout, shouldCloseStdout := getStdoutFile(parseResult.StdoutPath, parseResult.StdoutAppend)
+			stderr, shouldCloseStderr := getStderrFile(parseResult.StderrPath, parseResult.StderrAppend)
 
 			cmd := commands.Command(parseResult.Command, parseResult.Args...)
 			cmd.Out = stdout

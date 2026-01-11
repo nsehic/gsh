@@ -28,10 +28,12 @@ type Parser struct {
 }
 
 type ParseResult struct {
-	Command            string
-	Args               []string
-	StdoutRedirectPath string
-	StderrRedirectPath string
+	Command      string
+	Args         []string
+	StdoutPath   string
+	StderrPath   string
+	StdoutAppend bool
+	StderrAppend bool
 }
 
 func (p *Parser) Parse(input string) *ParseResult {
@@ -80,7 +82,7 @@ func (p *Parser) Parse(input string) *ParseResult {
 			prevChar := p.getPrevChar(pos)
 			if p.escapeMode || p.singleQuoteMode || p.doubleQuoteMode {
 				p.writeChar(char)
-			} else if prevChar == ' ' || prevChar == '1' || prevChar == '2' {
+			} else if prevChar == ' ' || prevChar == '1' || prevChar == '2' || prevChar == '>' {
 				p.writeSymbol(char)
 			} else {
 				p.writeChar(char)
@@ -120,12 +122,24 @@ func (p *Parser) Parse(input string) *ParseResult {
 			token := tokens[symbolPos]
 			nextToken := tokens[symbolPos+1]
 			switch token.Value {
+			case ">>":
+				res.StdoutPath = nextToken.Value
+				res.StdoutAppend = true
+			case "1>>":
+				res.StdoutPath = nextToken.Value
+				res.StdoutAppend = true
+			case "2>>":
+				res.StderrPath = nextToken.Value
+				res.StderrAppend = true
 			case ">":
-				res.StdoutRedirectPath = nextToken.Value
+				res.StdoutPath = nextToken.Value
+				res.StdoutAppend = false
 			case "1>":
-				res.StdoutRedirectPath = nextToken.Value
+				res.StdoutPath = nextToken.Value
+				res.StdoutAppend = false
 			case "2>":
-				res.StderrRedirectPath = nextToken.Value
+				res.StderrPath = nextToken.Value
+				res.StderrAppend = false
 			}
 		}
 		return &res
