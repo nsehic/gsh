@@ -51,6 +51,7 @@ func getStderrFile(path string, append bool) (*os.File, bool) {
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
+	// trie := autocomplete.NewTrie("echo", "exit")
 	var parser Parser
 
 	for {
