@@ -43,7 +43,7 @@ func (t *Trie) StartsWith(prefix string) bool {
 	return node != nil
 }
 
-func (t *Trie) FindAllWithPrefix(prefix string) []string {
+func (t *Trie) Complete(prefix string) []string {
 	start := t.findNode(prefix)
 	if start == nil {
 		return nil
@@ -66,6 +66,9 @@ func (t *Trie) FindAllWithPrefix(prefix string) []string {
 }
 
 func (t *Trie) findNode(prefix string) *node {
+	if prefix == "" {
+		return nil
+	}
 	curr := t.root
 	for i := range len(prefix) {
 		next, ok := curr.children[prefix[i]]

@@ -1,15 +1,31 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"strings"
+	"syscall"
 
+	"github.com/codecrafters-io/shell-starter-go/autocomplete"
 	"github.com/codecrafters-io/shell-starter-go/commands"
+	"golang.org/x/term"
 )
+
+const prompt = "$ "
+
+func redrawLine(line []rune) {
+	fmt.Fprint(os.Stdout, "\r\033[K")
+	fmt.Fprint(os.Stdout, prompt)
+	fmt.Fprint(os.Stdout, string(line))
+}
+
+func printPrompt() {
+	fmt.Fprintf(os.Stdout, "\r%s", prompt)
+}
 
 func getOutputFile(path string, append bool) (*os.File, bool) {
 	flag := os.O_CREATE | os.O_WRONLY
@@ -50,48 +66,108 @@ func getStderrFile(path string, append bool) (*os.File, bool) {
 }
 
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
-	// trie := autocomplete.NewTrie("echo", "exit")
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		fmt.Fprintf(os.Stderr, "error: stdin is not a terminal\n")
+		return
+	}
+
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v", err)
+		return
+	}
+	defer term.Restore(fd, oldState)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sig
+		term.Restore(fd, oldState)
+		os.Exit(1)
+	}()
+
+	trie := autocomplete.NewTrie("echo", "exit")
+
+	buf := make([]byte, 1)
+	line := []rune{}
+	printPrompt()
 	var parser Parser
 
 	for {
-		fmt.Print("$ ")
-		if scanner.Scan() {
-			parseResult := parser.Parse(scanner.Text())
-			if parseResult == nil {
-				continue
+		_, err := os.Stdin.Read(buf)
+		if err != nil {
+			break
+		}
+		b := buf[0]
+
+		switch b {
+		case '\r', '\n':
+			os.Stdout.Write([]byte("\r\n"))
+
+			input := string(line)
+			line = nil // reset buffer
+
+			if strings.TrimSpace(input) == "" {
+				printPrompt()
+				break
 			}
 
-			stdout, shouldCloseStdout := getStdoutFile(parseResult.StdoutPath, parseResult.StdoutAppend)
-			stderr, shouldCloseStderr := getStderrFile(parseResult.StderrPath, parseResult.StderrAppend)
+			parseResult := parser.Parse(input)
+			if parseResult != nil {
+				stdout, shouldCloseStdout := getStdoutFile(
+					parseResult.StdoutPath,
+					parseResult.StdoutAppend,
+				)
+				stderr, shouldCloseStderr := getStderrFile(
+					parseResult.StderrPath,
+					parseResult.StderrAppend,
+				)
 
-			cmd := commands.Command(parseResult.Command, parseResult.Args...)
-			cmd.Out = stdout
-			cmd.Err = stderr
+				cmd := commands.Command(parseResult.Command, parseResult.Args...)
+				cmd.Out = stdout
+				cmd.Err = stderr
 
-			if err := cmd.Run(); err != nil {
-				var execError *exec.Error
-				var pathError *os.PathError
+				if err := cmd.Run(); err != nil {
+					var execError *exec.Error
+					var pathError *os.PathError
 
-				switch {
-				case errors.As(err, &execError):
-					fmt.Fprintf(cmd.Err, "%s: not found\n", cmd.Name)
-				case errors.As(err, &pathError):
-					fmt.Fprintf(cmd.Err, "%s: %v\n", cmd.Name, pathError.Err)
+					switch {
+					case errors.As(err, &execError):
+						fmt.Fprintf(cmd.Err, "%s: not found\n", cmd.Name)
+					case errors.As(err, &pathError):
+						fmt.Fprintf(cmd.Err, "%s: %v\n", cmd.Name, pathError.Err)
+					}
+				}
+
+				if shouldCloseStdout {
+					stdout.Close()
+				}
+				if shouldCloseStderr {
+					stderr.Close()
 				}
 			}
+			printPrompt()
 
-			if shouldCloseStdout {
-				if err := stdout.Close(); err != nil {
-					fmt.Printf("error: %v\n", err)
-				}
+		case '\t':
+			// Autocomplete
+			completions := trie.Complete(string(line))
+			if len(completions) == 0 {
+				break
 			}
-
-			if shouldCloseStderr {
-				if err := stderr.Close(); err != nil {
-					fmt.Printf("error: %v\n", err)
-				}
+			line = []rune(fmt.Sprintf("%s ", completions[0]))
+			redrawLine(line)
+		case 127:
+			// Backspace
+			if len(line) > 0 {
+				line = line[:len(line)-1]
+				os.Stdout.Write([]byte("\b \b"))
 			}
+		default:
+			// Normal printable character
+			line = append(line, rune(b))
+			os.Stdout.Write([]byte{b})
 		}
 	}
 }

@@ -11,8 +11,6 @@ import (
 
 type BuiltinCommand func(c *Cmd)
 
-var ErrBuiltinNotExists = errors.New("this builtin does not exist")
-
 var builtins map[string]BuiltinCommand
 
 func init() {
@@ -106,7 +104,7 @@ func cdCmd(c *Cmd) {
 
 	if info.IsDir() {
 		if err := os.Chdir(absDirpath); err != nil {
-			fmt.Fprintf(c.Err, "cd: %s: %v", dirpath, err)
+			fmt.Fprintf(c.Err, "cd: %s: %v\n", dirpath, err)
 		}
 	}
 }
