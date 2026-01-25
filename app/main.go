@@ -93,6 +93,7 @@ func (lr *LineReader) ReadLine() (string, error) {
 		case '\t':
 			completions := lr.autocompletion.Complete(line.String())
 			if len(completions) == 0 {
+				os.Stdout.Write([]byte("\x07"))
 				break
 			}
 			line.Reset()
