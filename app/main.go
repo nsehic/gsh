@@ -1,121 +1,61 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/autocomplete"
 	"github.com/codecrafters-io/shell-starter-go/commands"
-	"golang.org/x/term"
 )
 
-func getOutputFile(path string, append bool) (*os.File, bool) {
-	flag := os.O_CREATE | os.O_WRONLY
-	if append {
-		flag |= os.O_APPEND
-	} else {
-		flag |= os.O_TRUNC
+func findExecutablesInPath() ([]string, error) {
+	pathEnv := os.Getenv("PATH")
+	if pathEnv == "" {
+		return nil, nil
 	}
-	if !filepath.IsAbs(path) {
-		pwd, err := os.Getwd()
+
+	seen := make(map[string]struct{})
+	var executables []string
+
+	for _, dir := range filepath.SplitList(pathEnv) {
+		entries, err := os.ReadDir(dir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			return nil, false
+			continue
 		}
-		path = filepath.Join(pwd, path)
-	}
 
-	file, err := os.OpenFile(path, flag, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		return nil, false
-	}
-	return file, true
-}
-
-func getStdoutFile(path string, append bool) (*os.File, bool) {
-	if path == "" {
-		return os.Stdout, false
-	}
-	return getOutputFile(path, append)
-}
-
-func getStderrFile(path string, append bool) (*os.File, bool) {
-	if path == "" {
-		return os.Stderr, false
-	}
-	return getOutputFile(path, append)
-}
-
-type LineReader struct {
-	prompt         string
-	autocompletion *autocomplete.Trie
-}
-
-func (lr *LineReader) RedrawLine(line string) {
-	fmt.Fprint(os.Stdout, "\r\033[K")
-	fmt.Fprint(os.Stdout, lr.prompt)
-	fmt.Fprint(os.Stdout, line)
-}
-
-func (lr *LineReader) ReadLine() (string, error) {
-	fd := int(os.Stdin.Fd())
-	if !term.IsTerminal(fd) {
-		fmt.Fprintf(os.Stderr, "error: stdin is not a terminal\n")
-		return "", errors.New("stdin is not a terminal")
-	}
-
-	oldState, err := term.MakeRaw(fd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v", err)
-		return "", err
-	}
-	defer term.Restore(fd, oldState)
-
-	var line strings.Builder
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Fprintf(os.Stdout, "\r%s", lr.prompt)
-	for {
-		b, err := reader.ReadByte()
-		if err != nil {
-			return line.String(), err
-		}
-		switch b {
-		case '\r', '\n':
-			os.Stdout.Write([]byte("\r\n"))
-			return line.String(), nil
-		case '\t':
-			completions := lr.autocompletion.Complete(line.String())
-			if len(completions) == 0 {
-				os.Stdout.Write([]byte("\x07"))
-				break
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
 			}
-			line.Reset()
-			line.WriteString(fmt.Sprintf("%s ", completions[0]))
-			lr.RedrawLine(line.String())
-		case 127, 8:
-			if line.Len() > 0 {
-				s := line.String()
-				line.Reset()
-				line.WriteString(s[:len(s)-1])
-				os.Stdout.Write([]byte("\b \b"))
+
+			info, err := entry.Info()
+			if err != nil {
+				continue
 			}
-		default:
-			line.WriteByte(b)
-			os.Stdout.Write([]byte{b})
+
+			if info.Mode().IsRegular() && info.Mode()&0111 != 0 {
+				name := entry.Name()
+				if _, ok := seen[name]; !ok {
+					seen[name] = struct{}{}
+					executables = append(executables, name)
+				}
+			}
 		}
 	}
+
+	return executables, nil
 }
 
 func main() {
+	allCommands := []string{"echo", "exit"}
+	pathExecutables, _ := findExecutablesInPath()
+	allCommands = append(allCommands, pathExecutables...)
+
 	lr := LineReader{
-		autocompletion: autocomplete.NewTrie("echo", "exit"),
+		autocompletion: autocomplete.NewTrie(allCommands...),
 		prompt:         "$ ",
 	}
 
