@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 
 	"github.com/codecrafters-io/shell-starter-go/autocomplete"
 	"github.com/codecrafters-io/shell-starter-go/commands"
@@ -17,8 +19,7 @@ func findExecutablesInPath() ([]string, error) {
 		return nil, nil
 	}
 
-	seen := make(map[string]struct{})
-	var executables []string
+	executables := make(map[string]struct{})
 
 	for _, dir := range filepath.SplitList(pathEnv) {
 		entries, err := os.ReadDir(dir)
@@ -38,15 +39,14 @@ func findExecutablesInPath() ([]string, error) {
 
 			if info.Mode().IsRegular() && info.Mode()&0111 != 0 {
 				name := entry.Name()
-				if _, ok := seen[name]; !ok {
-					seen[name] = struct{}{}
-					executables = append(executables, name)
+				if _, ok := executables[name]; !ok {
+					executables[name] = struct{}{}
 				}
 			}
 		}
 	}
 
-	return executables, nil
+	return slices.Sorted(maps.Keys(executables)), nil
 }
 
 func main() {
