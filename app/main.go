@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/autocomplete"
 	"github.com/codecrafters-io/shell-starter-go/commands"
@@ -53,10 +54,14 @@ func main() {
 	allCommands := []string{"echo", "exit"}
 	pathExecutables, _ := findExecutablesInPath()
 	allCommands = append(allCommands, pathExecutables...)
+	prompt := strings.TrimSpace(os.Getenv("PROMPT"))
+	if prompt == "" {
+		prompt = "$"
+	}
 
 	lr := LineReader{
 		autocompletion: autocomplete.NewTrie(allCommands...),
-		prompt:         "$ ",
+		prompt:         fmt.Sprintf("%s ", prompt),
 	}
 
 	var parser Parser
